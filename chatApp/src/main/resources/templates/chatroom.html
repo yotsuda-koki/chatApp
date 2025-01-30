@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>Chat</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script>
+	// WebSocket接続の初期化
+	let socket  = new SockJS("https://localhost:8443/chatroom");
+	
+	// メッセージ履歴を取得して表示する
+	async function loadMessageHistory() {
+		try {
+			let response = await fetch('/api/messages');
+			let messages = await response.json();
+			
+			messages.forEach(message => {
+					displayMessage(message);
+			});
+		} catch (error) {
+			console.error("Failed to load message history:", error);
+		}
+	}
+	
+	// メッセージを表示する
+	function displayMessage(data) {
+		let messages = document.getElementById("messages");
+		let messageElement = document.createElement("p");
+		
+	    if (data.link) {
+	        // リンクがある場合、リンクとして表示
+	        messageElement.innerHTML = `[${data.timestamp}] ${data.sender}: <a href="/download/${data.link}" target="_blank"> ${data.link} </a>`;
+	    } else {
+	        // 通常のメッセージ
+	        messageElement.textContent = `[${data.timestamp}] ${data.sender}: ${data.content}`;
+	    }
+		// メッセージを子要素に追加して表示する
+		messages.prepend(messageElement); 
+		messages.scrollTop = messages.scrollHeight;
+	}	
+	
+	// WebSocket接続時
+	socket.onopen = function () {
+		console.log("SockJS  connection established.");
+	};
+	
+	// WebSocket接続エラーのハンドリング
+	socket.onerror = function(event) {
+		console.error("SockJS  error: ", event);
+	};
+	
+	// 新規メッセージを受信したときの処理
+	socket.onmessage = function (event) {
+
+	//	 メッセージ履歴を表示させるために別の関数で記述する
+	//
+	//	 let messages = document.getElementById("messages");
+	//	 let message = document.createElement("p");
+	//	 message.textContent = event.data;
+	//	 messages.appendChild(message);
+	//	 messages.scrollTop = messages.scrollHeight;
+
+	
+		// JSON形式のデータを変換する
+		let data = JSON.parse(event.data); 
+		displayMessage(data);
+	};
+	
+	// メッセージを送信する関数
+	async function sendMessage() {
+		let input = document.getElementById("message");
+		if(input.value.trim() !== "") {
+			console.log("Sending message:", input.value); // ログを表示する 確認用
+			socket.send(input.value);
+			input.value = '';
+		}
+	}
+	
+	// ファイルをアップロードする関数
+    async function uploadFile() {
+        let fileInput = document.getElementById("fileInput");
+        
+        // アップロードエラー時
+        let errorMessage = document.getElementById("error-message");
+        errorMessage.textContent = "";
+        
+        if (!fileInput.files || fileInput.files.length === 0) {
+            // ファイルが選択されていない場合
+            errorMessage.textContent = "ファイルを選択してください。";
+            return;
+        }
+        
+        let formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        try {
+            let response = await fetch("/files/upload", {
+                method: "POST",
+                body: formData
+            });
+            let result = await response.text();
+
+            if (result.startsWith("link:")) {
+                // サーバーがリンクを返した場合、チャットに送信
+                socket.send(result);
+            } else {
+                // エラーメッセージを表示
+                errorMessage.textContent = result || "ファイルのアップロードに失敗しました。";
+            }
+     	    // ファイル選択をリセット
+            fileInput.value = ""; 
+        } catch (error) {
+            console.error("File upload failed:", error);
+            errorMessage.textContent = "ファイルのアップロードに失敗しました。";
+        }
+    }
+</script>
+</head>
+<body onload="loadMessageHistory()" class="bg-light">
+    <div class="container d-flex justify-content-center align-items-center vh-100">
+        <div class="col-md-8 col-lg-6 p-4 shadow rounded bg-white">
+	        <div class="d-flex justify-content-between mb-4">
+	            <h1 class="text-center mb-4">CHAT ROOM</h1>
+	            <a href="/logout" class="btn btn-outline-danger align-self-center">ログアウト</a>
+            </div>
+            
+            <div id="messages" class="border rounded p-3 mb-3" style="height: 300px; overflow-y: scroll; background-color: #f9f9f9;">
+                <!-- メッセージ -->
+            </div>
+            
+            <div class="input-group mb-3">
+                <input type="text" id="message" class="form-control" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage()" aria-label="Type a message">
+                <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+            </div>
+
+            <div class="input-group mb-3">
+                <input type="file" id="fileInput" class="form-control" aria-label="Upload a file">
+                <button class="btn btn-secondary" onclick="uploadFile()">Upload</button>
+            </div>
+            <p id="error-message" class="text-danger text-center small"></p>
+        </div>
+    </div>
+</body>
+</html>
