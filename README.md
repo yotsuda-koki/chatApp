@@ -18,9 +18,9 @@ ChatAppは、Spring Bootを使用して開発されたリアルタイムチャ�
 
 ## 使用技術
 - **バックエンド**: Java, Spring Boot, Spring Security, WebSocket, JPA (Hibernate)
-- **データベース**: H2（デフォルト）、MySQL（オプション）
+- **データベース**: H2、MySQL
 - **ビルドツール**: Maven
-- **フロントエンド**: HTML, CSS, JavaScript（必要に応じてReactやThymeleafの使用を検討）
+- **フロントエンド**: HTML, CSS, JavaScript
 
 ---
 
