@@ -33,8 +33,16 @@ ChatApp は、Spring Boot を使用して開発されたリアルタイムチャ
 
 ![Login Page](doc/images/login_page.png)
 
+### 登録ページ
+
+![Sing_Up](doc/images/signup.png)
+
 ### チャット画面
 
 ![Chat Screen](doc/images/chat_screen.png)
+
+### ファイルアップロード
+
+![File Upload](doc/images/file_upload.png)
 
 ---
